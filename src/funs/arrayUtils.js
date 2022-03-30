@@ -32,11 +32,13 @@ const arrayUtils = {
      * @param idKey  对象的唯一主键
      * @param parentKey 父节点的主键
      * @param childKey 子数据在父对象中的属性名
+     * @param defaultParentIdId 为数据上parentId为空的数据设置默认的parentId
      */
     arrayToTree(data = [],
                 idKey = "id",
                 parentKey = "parentId",
-                childKey = "children") {
+                childKey = "children",
+                defaultParentIdId='_root') {
         // 根节点数组
         const parentIds = new Set();
         const existParentIds = new Set();
@@ -48,7 +50,7 @@ const arrayUtils = {
             item[childKey] = cur ? cur[childKey] : [];
             dataMap[id] = item;
             // 处理父亲节点
-            const parentId = item[parentKey];
+            const parentId = item[parentKey] || defaultParentIdId;
             if (parentId) {
                 if (!existParentIds.has(parentId)) {
                     // 收集父节点的id
@@ -70,6 +72,9 @@ const arrayUtils = {
         parentIds.forEach(pid => {
             root.push(dataMap[pid]);
         });
+        if(dataMap[defaultParentIdId]){
+            root.push(...dataMap[defaultParentIdId])
+        }
         return root;
     },
     /**

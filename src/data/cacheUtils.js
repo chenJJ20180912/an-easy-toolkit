@@ -7,6 +7,7 @@ const cacheSpace = {
     storageProviderMap: {},// 数据存储介质 颗粒度比storageProvider更细
     storageInterval: null,
     data: {},
+    cacheListeners: {},// 缓存监听器
     /**
      * 获取缓存区域的数据存储支撑对象
      * @param region 缓存区域
@@ -25,7 +26,7 @@ const cacheSpace = {
      * @param clone 是否clone对象
      * @returns {*|{}}
      */
-    getRegion(region = "",clone=true) {
+    getRegion(region = "", clone = true) {
         if (cacheSpace.storeTime && cacheSpace.storageInterval !== null) {
             // 开启定时备份
             this.startStorageInterval()
@@ -40,8 +41,8 @@ const cacheSpace = {
             }
             this.data[region] = cacheData;
         }
-        if(!clone){
-            cacheData =  objectUtils.deepClone(cacheData)
+        if (!clone) {
+            cacheData = objectUtils.deepClone(cacheData)
         }
         // 对 cacheData 进行一个深克隆,避免外面的数据和缓存的数据是同一个对象
         return cacheData
@@ -53,7 +54,7 @@ const cacheSpace = {
      * @returns {*}
      */
     getCache(region = "", key = "") {
-        return this.getRegion(region,false)[key];
+        return this.getRegion(region, false)[key];
     },
     /**
      * 放置缓存
@@ -62,9 +63,11 @@ const cacheSpace = {
      * @param value
      */
     putCache(region = "", key = "", value = {}) {
-        const cacheData = this.getRegion(region,false);
+        const cacheData = this.getRegion(region, false);
         cacheData[key] = value;
         this.getStorageProvider(region).setItem(region, JSON.stringify(cacheData));
+        // 通知事件监听机制
+        (this.cacheListeners[region] || []).forEach(cacheListener => cacheListener.onUpdat && cacheListener.onUpdate(region, key, value))
     },
     /**
      * 初始化缓存区域
@@ -96,11 +99,24 @@ const cacheSpace = {
     /**
      * 执行持久化
      */
-    doStorage(){
+    doStorage() {
         const cacheData = this.data || {};
         Object.keys(cacheData).forEach(key => {
             this.getStorageProvider(key).setItem(key, JSON.stringify(cacheData[key]));
         });
+    },
+    /**
+     * 添加一个缓存监听器
+     * @param region 监听的缓存区域
+     * @param cacheListener 监听器对象
+     */
+    addCacheListener(region, cacheListener) {
+        if (!this.cacheListeners[region]) {
+            this.cacheListeners[region] = []
+        }
+        this.cacheListeners[region].push(cacheListener)
     }
 };
+
+
 export default cacheSpace
